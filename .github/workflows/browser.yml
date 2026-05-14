@@ -1,0 +1,17 @@
+name: Video Searcher
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'لینک یا کلمه جستجو را وارد کنید'
+        required: true
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Tools
+        run: pip install yt-dlp
+      - name: Run Search
+        run: |
+          yt-dlp --print "%(title)s | %(duration_string)s | %(uploader)s" --print "Download: %(get_url)s" -g "${{ github.event.inputs.query }}"
