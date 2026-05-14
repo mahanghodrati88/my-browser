@@ -14,4 +14,7 @@ jobs:
         run: pip install yt-dlp
       - name: Run Search
         run: |
-          yt-dlp --print "%(title)s | %(duration_string)s | %(uploader)s" --print "Download: %(get_url)s" -g "${{ github.event.inputs.query }}"
+          echo "--- مشخصات ویدیو ---"
+          yt-dlp --print "%(title)s | %(duration_string)s | %(uploader)s" --print "Thumbnail: %(thumbnail)s" "${{ github.event.inputs.query }}"
+          echo -e "\n--- لینک‌های استخراج شده ---"
+          yt-dlp -g --format "best" "${{ github.event.inputs.query }}" || echo "لینک مستقیم در این سرور مسدود است."
