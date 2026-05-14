@@ -1,109 +1,94 @@
-import sys
-import os
-import json
-import time
-import logging
-import threading
-from datetime import datetime
+name: 🚀 Monster Video Engine Pro
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'لینک ویدیو یا کلمه کلیدی (مثلا phsearch10:blonde)'
+        required: true
+      quality_limit:
+        description: 'حداکثر کیفیت (720, 1080, best)'
+        default: 'best'
 
-try:
-    import yt_dlp
-    from colorama import Fore, Style, init
-except ImportError:
-    os.system('pip install yt-dlp colorama requests')
-    import yt_dlp
-    from colorama import Fore, Style, init
+jobs:
+  ultimate_process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛠 Prepare Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip install --upgrade pip
+          pip install yt-dlp colorama
 
-init(autoreset=True)
+      - name: 🌪 Monster Scraper Core
+        shell: python
+        run: |
+          import yt_dlp
+          import os
+          import sys
+          import json
+          from colorama import Fore, Style, init
 
-# -------------------------------------------------------------------
-# CONFIGURATION & LOGGING SETUP
-# -------------------------------------------------------------------
-LOG_FORMAT = f"{Fore.CYAN}%(asctime)s{Style.RESET_ALL} | %(levelname)s | %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger("UltimateEngine")
+          init(autoreset=True)
 
-class VideoEngine:
-    """
-    موتور پیشرفته استخراج و تحلیل ویدیو
-    طراحی شده برای دور زدن محدودیت‌های IP و استخراج حداکثری دیتا
-    """
-    
-    def __init__(self, target, mode):
-        self.target = target
-        self.mode = mode
-        self.results = []
-        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-    def get_ydl_options(self):
-        """تنظیمات فوق پیشرفته برای استخراج بدون بلاک شدن"""
-        return {
-            'quiet': True,
-            'no_warnings': True,
-            'format': 'bestvideo+bestaudio/best',
-            'extract_flat': 'in_playlist' if 'search' in self.target else False,
-            'ignoreerrors': True,
-            'no_color': False,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-            'referer': 'https://www.google.com/',
-            'geo_bypass': True,
-            'nocheckcertificate': True,
-        }
+          # --- CONFIGURATION ---
+          TARGET = "${{ github.event.inputs.target }}"
+          QUALITY = "${{ github.event.inputs.quality_limit }}"
+          
+          def print_banner():
+              banner = f"""
+              {Fore.RED}############################################################
+              {Fore.YELLOW}          🚀 MONSTER VIDEO SCRAPER ENGINE v4.0
+              {Fore.CYAN}    POWERED BY GITHUB CLOUD - BYPASSING FILTRATION
+              {Fore.RED}############################################################
+              """
+              print(banner)
 
-    def print_banner(self):
-        print(f"\n{Fore.YELLOW}{'='*70}")
-        print(f"{Fore.MAGENTA}🚀 ULTIMATE SCRAPER ENGINE v2.5 | SESSION: {self.session_id}")
-        print(f"{Fore.YELLOW}{'='*70}\n")
+          def get_monster_opts():
+              return {
+                  'quiet': True,
+                  'no_warnings': True,
+                  'format': f'bestvideo[height<={QUALITY}]+bestaudio/best[height<={QUALITY}]' if QUALITY != 'best' else 'best',
+                  'extract_flat': 'in_playlist' if 'search' in TARGET else False,
+                  'nocheckcertificate': True,
+                  'ignoreerrors': True,
+                  'no_color': False,
+                  'geo_bypass': True,
+                  'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  'referer': 'https://www.google.com/',
+              }
 
-    def process_metadata(self, info):
-        """تحلیل عمیق داده‌های دریافتی"""
-        data = {
-            'title': info.get('title', 'Unknown'),
-            'duration': info.get('duration_string', 'N/A'),
-            'uploader': info.get('uploader', 'Unknown'),
-            'views': info.get('view_count', 0),
-            'tags': info.get('tags', []),
-            'thumbnail': info.get('thumbnail', ''),
-            'webpage': info.get('webpage_url', '')
-        }
-        return data
+          def process():
+              print_banner()
+              print(f"{Fore.GREEN}[*] Initializing Attack on Target: {Style.BRIGHT}{TARGET}")
+              
+              ydl_opts = get_monster_opts()
+              
+              with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                  try:
+                      info = ydl.extract_info(TARGET, download=False)
+                      
+                      if not info:
+                          print(f"{Fore.RED}[!] Error: No data could be retrieved. Target might be protected.")
+                          return
 
-    def extract_direct_links(self, info):
-        """تکنیک استخراج لینک مستقیم با تست زنده بودن"""
-        formats = info.get('formats', [])
-        valid_links = []
-        logger.info(f"Analyzing {len(formats)} possible stream formats...")
-        
-        for f in formats:
-            # فیلتر کردن لینک‌های m3u8 که در دانلودرهای معمولی اذیت می‌کنند
-            if f.get('url') and 'm3u8' not in f.get('url'):
-                valid_links.append({
-                    'quality': f.get('format_note', 'Unknown'),
-                    'ext': f.get('ext', 'mp4'),
-                    'url': f.get('url')
-                })
-        return valid_links
-
-    def run(self):
-        self.print_banner()
-        logger.info(f"Target Acquired: {Fore.GREEN}{self.target}")
-        logger.info(f"Mode: {Fore.BLUE}{self.mode}")
-
-        with yt_dlp.YoutubeDL(self.get_ydl_options()) as ydl:
-            try:
-                # مرحله ۱: استخراج اطلاعات خام
-                raw_info = ydl.extract_info(self.target, download=False)
-                
-                if not raw_info:
-                    logger.error("No data returned from server.")
-                    return
-
-                # مرحله ۲: تفکیک لیست (جستجو) از تک ویدیو
-                if 'entries' in raw_info:
-                    logger.info(f"Detected Playlist/Search result with {len(raw_info['entries'])} items.")
-                    for entry in raw_info['entries']:
-                        if entry:
-                            print(f"{Fore.GREEN}📌 {entry.get('title')[:60]}...")
-                            print(f"   🔗 URL: {entry.get('url')}")
-                            print(f"   ⏱ Time: {entry.get('duration_string', 'N/A')}\n")
-                else:
+                      # CASE 1: SEARCH RESULTS OR PLAYLIST
+                      if 'entries' in info:
+                          entries = [e for e in info['entries'] if e is not None]
+                          print(f"{Fore.MAGENTA}[+] Found {len(entries)} Potential Targets:\n")
+                          print(f"{Fore.WHITE}{'#'*60}")
+                          for i, entry in enumerate(entries, 1):
+                              title = entry.get('title', 'N/A')
+                              v_url = entry.get('url', entry.get('webpage_url', 'N/A'))
+                              dur = entry.get('duration_string', '??:??')
+                              print(f"{Fore.YELLOW}{i}. {Fore.WHITE}{title}")
+                              print(f"   {Fore.CYAN}⏱ {dur} | {Fore.BLUE}🔗 {v_url}")
+                              print(f"{Fore.WHITE}{'-'*60}")
+                      
+                      # CASE 2: SINGLE VIDEO EXTRACTION
+                      else:
+                          print(f"{Fore.MAGENTA}[+] Target Identified Successfully!")
+                          print(f"{Fore.WHITE}Title: {Fore.YELLOW}{info.get('title')}")
+                          print(f"{Fore.WHITE}Uploader: {Fore.YELLOW}{info.get('uploader')}")
+                          print(f"{Fore.WHITE}Duration: {Fore.YELLOW}{info.get('duration_string')}")
+                          print(f"{Fore.WHITE}Views: {Fore.YELLOW}{info.get('view_count', 'N/
