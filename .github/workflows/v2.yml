@@ -1,0 +1,55 @@
+name: Video Searcher
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'لینک یا کلمه جستجو را وارد کنید'
+        required: true
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Tools
+        run: pip install yt-dlp
+      - name: Run Search
+        run: |
+          echo "--- مشخصات ویدیو ---"
+          yt-dlp --print "%(title)s | %(duration_string)s | %(uploader)s" --print "Thumbnail: %(thumbnail)s" "${{ github.event.inputs.query }}"
+          echo -e "\n--- لینک‌های استخراج شده ---"
+          yt-dlp -g --format "best" "${{ github.event.inputs.query }}" || echo "لینک مستقیم در این سرور مسدود است."
+          name: Ultimate Video Engine V2
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'لینک یا دستور جستجو (مثلا phsearch20:blonde)'
+        required: true
+      action_type:
+        description: 'نوع عملیات'
+        default: 'metadata'
+        type: choice
+        options:
+          - metadata
+          - direct_link
+          - search_only
+
+jobs:
+  execute_engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Core Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yt-dlp requests colorama
+
+      - name: Run Ultimate Scraper Engine
+        run: python engine.py "${{ github.event.inputs.target }}" "${{ github.event.inputs.action_type }}"
